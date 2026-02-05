@@ -9,8 +9,9 @@ pub struct TripInput {
 
 #[derive(Clone, Copy)]
 pub enum Pattern {
-    Full,       // To Sand Canyon, then Return to Dock 4
-    ShortYale,  // To Yale/Irvine
+    Full,       // To Sand Canyon, then Return to Dock 4 (0-7)
+    ShortYale,  // To Yale/Irvine (0-4)
+    StartYale,  // From Yale/Irvine to Dock 4 (Morning setup) (4-7)
 }
 
 // Timepoints
@@ -85,6 +86,7 @@ pub fn get_trips() -> Vec<TripInput> {
         RawTrip { bus_id: 3, block_id: "0600", start_time: "18:35", pattern: Pattern::ShortYale }, // Ends 19:40
 
         // Bus 4 (0520)
+        RawTrip { bus_id: 4, block_id: "0520", start_time: "06:00", pattern: Pattern::StartYale },
         RawTrip { bus_id: 4, block_id: "0520", start_time: "07:00", pattern: Pattern::Full },
         RawTrip { bus_id: 4, block_id: "0520", start_time: "08:55", pattern: Pattern::Full },
         RawTrip { bus_id: 4, block_id: "0520", start_time: "10:50", pattern: Pattern::Full },
@@ -94,22 +96,25 @@ pub fn get_trips() -> Vec<TripInput> {
         RawTrip { bus_id: 4, block_id: "0520", start_time: "18:55", pattern: Pattern::ShortYale }, // Ends 20:00
 
         // Bus 5 (0535)
+        RawTrip { bus_id: 5, block_id: "0535", start_time: "06:20", pattern: Pattern::StartYale },
         RawTrip { bus_id: 5, block_id: "0535", start_time: "07:20", pattern: Pattern::Full },
         RawTrip { bus_id: 5, block_id: "0535", start_time: "09:15", pattern: Pattern::Full },
         RawTrip { bus_id: 5, block_id: "0535", start_time: "11:20", pattern: Pattern::Full },
         RawTrip { bus_id: 5, block_id: "0535", start_time: "13:10", pattern: Pattern::Full },
         RawTrip { bus_id: 5, block_id: "0535", start_time: "15:10", pattern: Pattern::Full },
         RawTrip { bus_id: 5, block_id: "0535", start_time: "17:10", pattern: Pattern::Full },
-        RawTrip { bus_id: 5, block_id: "0535", start_time: "19:15", pattern: Pattern::ShortYale }, // Ends 20:20 (Est 8:05 PM = 20:05? Wait +65 mins from 19:15 is 20:20. Image says 8:05 PM (20:05). 19:15+50=20:05. Offset for Yale/Irvine is 65. Wait. 19:15->20:05 is 50 mins. Offset 65? Is traffic lighter? I will use calculated time based on offset for consistency unless critical).
+        RawTrip { bus_id: 5, block_id: "0535", start_time: "19:15", pattern: Pattern::ShortYale }, // Ends 20:20
 
         // Bus 6 (0550)
+        RawTrip { bus_id: 6, block_id: "0550", start_time: "06:40", pattern: Pattern::StartYale },
         RawTrip { bus_id: 6, block_id: "0550", start_time: "07:40", pattern: Pattern::Full },
         RawTrip { bus_id: 6, block_id: "0550", start_time: "09:35", pattern: Pattern::Full },
         RawTrip { bus_id: 6, block_id: "0550", start_time: "11:40", pattern: Pattern::Full },
         RawTrip { bus_id: 6, block_id: "0550", start_time: "13:30", pattern: Pattern::Full },
         RawTrip { bus_id: 6, block_id: "0550", start_time: "15:30", pattern: Pattern::Full },
         RawTrip { bus_id: 6, block_id: "0550", start_time: "17:30", pattern: Pattern::Full },
-        // Bus 6 last trip?
+        // Bus 6 last trip inferred
+        RawTrip { bus_id: 6, block_id: "0550", start_time: "19:35", pattern: Pattern::ShortYale }, // Ends 20:40
     ];
 
     process_trips(&mut trips, trips_mf, service_mf);
@@ -142,7 +147,7 @@ pub fn get_trips() -> Vec<TripInput> {
         RawTrip { bus_id: 3, block_id: "0800", start_time: "14:30", pattern: Pattern::Full },
         RawTrip { bus_id: 3, block_id: "0800", start_time: "16:30", pattern: Pattern::Full },
         RawTrip { bus_id: 3, block_id: "0800", start_time: "18:30", pattern: Pattern::Full },
-        RawTrip { bus_id: 3, block_id: "0800", start_time: "20:35", pattern: Pattern::ShortYale }, // Ends 21:40 (8:35+65=9:40)
+        RawTrip { bus_id: 3, block_id: "0800", start_time: "20:35", pattern: Pattern::ShortYale }, // Ends 21:40
 
         // Bus 4 (0720)
         RawTrip { bus_id: 4, block_id: "0720", start_time: "09:00", pattern: Pattern::Full },
@@ -168,7 +173,8 @@ pub fn get_trips() -> Vec<TripInput> {
         RawTrip { bus_id: 6, block_id: "0750", start_time: "13:40", pattern: Pattern::Full },
         RawTrip { bus_id: 6, block_id: "0750", start_time: "15:40", pattern: Pattern::Full },
         RawTrip { bus_id: 6, block_id: "0750", start_time: "17:35", pattern: Pattern::Full },
-        // Bus 6 last trip missing?
+        RawTrip { bus_id: 6, block_id: "0750", start_time: "19:35", pattern: Pattern::Full }, // Added inferred Full
+        RawTrip { bus_id: 6, block_id: "0750", start_time: "21:35", pattern: Pattern::ShortYale }, // Added inferred Short
     ];
     
     process_trips(&mut trips, trips_we, service_we);
@@ -180,17 +186,27 @@ fn process_trips(trips: &mut Vec<TripInput>, raw_trips: Vec<RawTrip>, service_id
     for (i, trip) in raw_trips.into_iter().enumerate() {
         let start = NaiveTime::parse_from_str(trip.start_time, "%H:%M").unwrap();
         
-        let mut stops = Vec::new();
-        
-        let max_idx = match trip.pattern {
-            Pattern::Full => 7,
-            Pattern::ShortYale => 4,
+        // Define range based on pattern
+        let (min_idx, max_idx) = match trip.pattern {
+            Pattern::Full => (0, 7),
+            Pattern::ShortYale => (0, 4),
+            Pattern::StartYale => (4, 7),
         };
 
+        let mut stops = Vec::new();
+
+        // Calculate offset adjustment. 
+        // trip.start_time is assumed to be the time at min_idx.
+        // So time at idx = start + (OFFSETS[idx] - OFFSETS[min_idx])
+        let base_offset = OFFSETS[min_idx];
+
         for (idx, offset) in OFFSETS.iter().enumerate() {
-            if idx > max_idx { break; }
+            if idx < min_idx || idx > max_idx { continue; }
             
-            let time = start + chrono::Duration::minutes(*offset);
+            // Calculate relative offset from the start of this specific trip
+            let relative_offset = *offset - base_offset;
+            
+            let time = start + chrono::Duration::minutes(relative_offset);
             let time_str = time.format("%H:%M:%S").to_string();
             
             // For Index 7 (Return Dock 4), the ID is SAME as Index 0
@@ -198,9 +214,6 @@ fn process_trips(trips: &mut Vec<TripInput>, raw_trips: Vec<RawTrip>, service_id
             
             stops.push((stop_id, Some(time_str)));
         }
-
-        // Convert stops to static str equivalent for time strings logic if needed, 
-        // but here we allocate String.
         
         trips.push(TripInput {
             trip_id: format!("{}_{}_{}", service_id.to_lowercase(), trip.bus_id, i + 1),
