@@ -1,4 +1,4 @@
-name: Update Amtrak files
+name: Update irvine connect files
 
 on:
   workflow_call:
