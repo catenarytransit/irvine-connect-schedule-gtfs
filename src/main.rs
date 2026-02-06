@@ -44,6 +44,7 @@ struct StopTime {
     departure_time: String,
     stop_id: String,
     stop_sequence: u32,
+    stop_headsign: String,
     timepoint: u8,
 }
 
@@ -292,19 +293,28 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let stop_id = trip_stops_sequence[current_idx].stop_id.clone();
                 let is_tp = if current_idx == start_idx || current_idx == end_idx { 1 } else { 0 };
                 
-                // Avoid duplicates: if we just added this index (from previous segment end), don't add.
-                // My logic `if current_idx == end_idx ... continue` handles strict overlap.
-                
-                // Wait, logic check:
-                // Seg 1: 0 to 5.
-                // Seg 2: 5 to 10.
-                // Loop 1 iterates 0, 1, 2, 3, 4, 5.
-                // `if current_idx == end_idx (5) && i < ...` -> Skips 5.
-                // Loop 2 starts at 5. Adds 5.
-                // Correct.
-                // For last segment (i = len-2):
-                // `if current_idx == end_idx (Last) && i < len-2` -> False. Adds Last.
-                // Correct.
+                // Determine headsign
+                let forced_headsign = if let Some((last_stop_id_int, _)) = trip_input.stops.last() {
+                     if last_stop_id_int.to_string() == "157625" {
+                         Some("Yale Ave @ Irvine Blvd")
+                     } else {
+                         None
+                     }
+                } else {
+                    None
+                };
+
+                let headsign = if let Some(h) = forced_headsign {
+                    h.to_string()
+                } else {
+                    // Sequence of 86 stops. Split at index 45 (stop 198259).
+                    let idx_in_loop = current_idx % 86;
+                    if idx_in_loop < 45 {
+                        "Northwood High School".to_string()
+                    } else {
+                        "Irvine Station".to_string()
+                    }
+                };
 
                 st_w.serialize(StopTime {
                     trip_id: trip_input.trip_id.clone(),
@@ -312,6 +322,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     departure_time: time_s,
                     stop_id: stop_id,
                     stop_sequence: (current_idx + 1) as u32,
+                    stop_headsign: headsign,
                     timepoint: is_tp,
                 })?;
             }
