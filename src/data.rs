@@ -113,8 +113,6 @@ pub fn get_trips() -> Vec<TripInput> {
         RawTrip { bus_id: 6, block_id: "0550", start_time: "13:30", pattern: Pattern::Full },
         RawTrip { bus_id: 6, block_id: "0550", start_time: "15:30", pattern: Pattern::Full },
         RawTrip { bus_id: 6, block_id: "0550", start_time: "17:30", pattern: Pattern::Full },
-        // Bus 6 last trip inferred
-        RawTrip { bus_id: 6, block_id: "0550", start_time: "19:35", pattern: Pattern::ShortYale }, // Ends 20:40
     ];
 
     process_trips(&mut trips, trips_mf, service_mf);
@@ -173,8 +171,7 @@ pub fn get_trips() -> Vec<TripInput> {
         RawTrip { bus_id: 6, block_id: "0750", start_time: "13:40", pattern: Pattern::Full },
         RawTrip { bus_id: 6, block_id: "0750", start_time: "15:40", pattern: Pattern::Full },
         RawTrip { bus_id: 6, block_id: "0750", start_time: "17:35", pattern: Pattern::Full },
-        RawTrip { bus_id: 6, block_id: "0750", start_time: "19:35", pattern: Pattern::Full }, // Added inferred Full
-        RawTrip { bus_id: 6, block_id: "0750", start_time: "21:35", pattern: Pattern::ShortYale }, // Added inferred Short
+        RawTrip { bus_id: 6, block_id: "0750", start_time: "19:30", pattern: Pattern::Full }, // Ends 21:30
     ];
     
     process_trips(&mut trips, trips_we, service_we);
