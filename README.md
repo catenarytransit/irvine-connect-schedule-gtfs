@@ -4,6 +4,8 @@ This tool generates a GTFS feed for the Irvine Connect bus based on geospatial f
 
 You can find the original PDF document given to us in [Final Resposne K. Chin.pdf](Final%20Resposne%20-%20K.%20Chin.pdf)
 
+The GTFS realtime processing is done here: https://github.com/catenarytransit/irvine-connect-realtime-gtfs
+
 ## How to Run
 
 1.  Ensure you have Rust installed.
