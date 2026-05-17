@@ -2,6 +2,8 @@
 
 This tool generates a GTFS feed for the Irvine Connect bus based on geospatial files from Passio GTFS and schedule data obtained through freedom of information act requests.
 
+You can find the original PDF document given to us in [Final Resposne K. Chin.pdf](Final%20Resposne%20-%20K.%20Chin.pdf)
+
 ## How to Run
 
 1.  Ensure you have Rust installed.
