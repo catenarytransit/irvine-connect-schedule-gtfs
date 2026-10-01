@@ -59,3 +59,6 @@ Holiday exceptions (dates with NO service) are hardcoded in `src/main.rs` under 
 *   `input/stops.txt`: Static list of stops.
 *   `input/shapes.txt`: The route geometry.
 *   `input/stop_id_sequence.txt`: The ordered list of Stop IDs the bus visits on its route. This handles the loop logic.
+  
+## Final result
+https://catenarymaps.org/en/agency/Irvine_Connect/route/ic 
