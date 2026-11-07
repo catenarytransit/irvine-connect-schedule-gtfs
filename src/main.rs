@@ -4,7 +4,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::{self, File};
-use chrono::NaiveTime;
+use jiff::{civil::Time, ToSpan};
 use itertools::Itertools;
 
 mod data;
@@ -262,10 +262,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             let start_time_str = trip_input.stops[i].1.clone().unwrap();
             let end_time_str = trip_input.stops[i+1].1.clone().unwrap();
             
-            let start_time = NaiveTime::parse_from_str(&start_time_str, "%H:%M:%S").unwrap();
-            let end_time = NaiveTime::parse_from_str(&end_time_str, "%H:%M:%S").unwrap();
+            let start_time = Time::strptime("%H:%M:%S", &start_time_str).unwrap();
+            let end_time = Time::strptime("%H:%M:%S", &end_time_str).unwrap();
             
-            let duration = end_time - start_time;
+            let duration = end_time.duration_since(start_time);
             let num_segments = (end_idx - start_idx) as i64;
             
             for j in 0..=num_segments {
@@ -283,12 +283,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                 
                 // Calculate time
                 let added_mins = if num_segments > 0 {
-                    duration.num_minutes() * j / num_segments
+                    (duration.as_secs() / 60) * j / num_segments
                 } else {
                     0
                 };
-                let current_time = start_time + chrono::Duration::minutes(added_mins);
-                let time_s = current_time.format("%H:%M:%S").to_string();
+                let current_time = start_time.wrapping_add(added_mins.minutes());
+                let time_s = current_time.strftime("%H:%M:%S").to_string();
                 
                 let stop_id = trip_stops_sequence[current_idx].stop_id.clone();
                 let is_tp = if current_idx == start_idx || current_idx == end_idx { 1 } else { 0 };
