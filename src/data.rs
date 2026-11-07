@@ -1,4 +1,4 @@
-use chrono::NaiveTime;
+use jiff::{civil::Time, ToSpan};
 
 pub struct TripInput {
     pub trip_id: String,
@@ -181,7 +181,7 @@ pub fn get_trips() -> Vec<TripInput> {
 
 fn process_trips(trips: &mut Vec<TripInput>, raw_trips: Vec<RawTrip>, service_id: &'static str) {
     for (i, trip) in raw_trips.into_iter().enumerate() {
-        let start = NaiveTime::parse_from_str(trip.start_time, "%H:%M").unwrap();
+        let start = Time::strptime("%H:%M", trip.start_time).unwrap();
         
         // Define range based on pattern
         let (min_idx, max_idx) = match trip.pattern {
@@ -203,8 +203,8 @@ fn process_trips(trips: &mut Vec<TripInput>, raw_trips: Vec<RawTrip>, service_id
             // Calculate relative offset from the start of this specific trip
             let relative_offset = *offset - base_offset;
             
-            let time = start + chrono::Duration::minutes(relative_offset);
-            let time_str = time.format("%H:%M:%S").to_string();
+            let time = start.wrapping_add(relative_offset.minutes());
+            let time_str = time.strftime("%H:%M:%S").to_string();
             
             // For Index 7 (Return Dock 4), the ID is SAME as Index 0
             let stop_id = if idx == 7 { TIMEPOINTS[0] } else { TIMEPOINTS[idx] };
@@ -218,5 +218,19 @@ fn process_trips(trips: &mut Vec<TripInput>, raw_trips: Vec<RawTrip>, service_id
             block_id: trip.block_id,
             stops: stops.into_iter().map(|(id, t)| (id, t)).collect(),
         });
+    }
+}
+
+#[cfg(test)]
+mod jiff_regressions {
+    use super::*;
+    #[test]
+    fn weekday_and_weekend_timepoints_keep_their_departure_offsets() {
+        let trips = get_trips();
+        assert!(!trips.is_empty());
+        let first = &trips[0];
+        assert_eq!(first.stops.first().unwrap().1.as_deref(), Some("06:00:00"));
+        assert_eq!(first.stops.last().unwrap().1.as_deref(), Some("07:50:00"));
+        assert!(trips.iter().any(|trip| trip.service_id == "Weekend"));
     }
 }
